@@ -6,6 +6,8 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.messaging.*;
+import com.google.gson.JsonArray;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import ru.customs.entity.FriendlyMessage;
@@ -14,9 +16,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 public class Firebase {
-
     private static final String DATABASE_URL = "https://renelogistika.firebaseio.com/";
     private FirebaseDatabase firebaseDatabase;
 
@@ -45,7 +47,7 @@ public class Firebase {
     }
 
 
-    public void update(FriendlyMessage message, String key) {
+    public void update(FriendlyMessage message, String key, String fcmToken) {
         try {
             DatabaseReference ref = firebaseDatabase.getReference("messages-"+key);
             final CountDownLatch latch = new CountDownLatch(1);
@@ -62,11 +64,38 @@ public class Firebase {
                 }
             });
             latch.await();
+
+            sendPersonal(fcmToken);
         } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (FirebaseMessagingException e) {
             e.printStackTrace();
         } finally {
             close();
         }
+    }
+
+    public String sendPersonal( String clientToken)
+            throws  FirebaseMessagingException {
+        Notification notification = new Notification("Новое сообщение", "Зайдите в чат");
+        MulticastMessage message = MulticastMessage.builder()
+               .addToken(clientToken)
+               .setNotification(notification).build();
+
+        System.out.println("Message: "+ message.toString());
+        BatchResponse response = FirebaseMessaging.getInstance().sendMulticast(message);
+        System.out.println("Successfully sent message: " + response.toString());
+        return response.getSuccessCount()+"";
+    }
+
+    private WebpushNotification.Builder createBuilder(PushNotifyConf conf){
+        WebpushNotification.Builder builder = WebpushNotification.builder();
+        builder.addAction(new WebpushNotification
+                .Action(conf.getClick_action(), "Открыть"))
+                .setImage(conf.getIcon())
+                .setTitle(conf.getTitle())
+                .setBody(conf.getBody());
+        return builder;
     }
 
     public void close() {

@@ -24,6 +24,9 @@ public class MessageService {
     @Autowired
     DeclarantService declarantService;
 
+    @Autowired
+    FCMTokenService fcmService;
+
     public Iterable<MessageEntity> getAllMessagesByClaim(Long claimId) {
         return repository.findAllByCalimId(claimId);
     }
@@ -40,7 +43,8 @@ public class MessageService {
         System.out.println("Send  message "+message.getId() + " text: "+message.getText()+" for claim: "+message.getClaimId());
         ClaimResponse claim = claimService.getById(message.getClaimId());
         DeclarantEntity declarant = declarantService.getById(claim.getDeclarant().getId());
-        new Firebase().update(new FriendlyMessage(message.getText(), manager.getName()), declarant.getFirebase());
+        String fcmToken = fcmService.getByDeclarant(declarant.getFirebase());
+        new Firebase().update(new FriendlyMessage(message.getText(), manager.getName()), declarant.getFirebase(), fcmToken);
 
     }
 

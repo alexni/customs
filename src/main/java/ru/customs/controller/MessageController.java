@@ -5,10 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.customs.dto.*;
 import ru.customs.entity.*;
 import ru.customs.exception.UserNotFoundException;
-import ru.customs.service.ClaimService;
-import ru.customs.service.DeclarantService;
-import ru.customs.service.MessageService;
-import ru.customs.service.UserService;
+import ru.customs.service.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,6 +19,9 @@ public class MessageController {
 
     @Autowired
     MessageService service;
+
+    @Autowired
+    FCMTokenService fcmService;
 
     @Autowired
     UserService userService;
@@ -80,5 +80,15 @@ public class MessageController {
         }
         MessageEntity entity = new MessageEntity(message.getText(),0L, null, declarant.getId(), MessageState.New);
         service.saveToLastClaim(entity, declarant.getId());
+    }
+
+    @PostMapping("/phone/token")
+    void createPhoneMessage(@RequestBody NewTokenRequest message,
+                            @RequestHeader(name = "x-auth-token", required = false, defaultValue = "driver") String token){
+        log.info("Phone message "+token+ " FCM token: "+ message.getToken());
+
+
+        FCMTokenEntity entity = new FCMTokenEntity(token, message.getToken());
+        fcmService.save(entity);
     }
 }
